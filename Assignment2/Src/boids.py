@@ -3,7 +3,7 @@
 import pygame
 from spriteloader import SpriteMe
 pygame.init()
-import random
+from random import randint, uniform
 
 
 class Boid(SpriteMe):
@@ -55,10 +55,15 @@ class Boid(SpriteMe):
         vec.y = other.rect.centery - self.rect.centery
         return vec
 
-    def close_to(self, other, r = 100):
-        """ Checks if two boids are close to each other"""
+    def close_to(self, other, r = 300):
+        """ Checks if two boids are close to each other.
+
+        Parameters:
+        -----------
+        r: Radius
+        """
         if r < 0:
-            raise ValueError("radius r must be greater tha or equal to zero")
+            raise ValueError("radius r must be greater than or equal to zero")
 
         if pygame.Vector2.length(self.vec_to(other)) <= r:
             return True
@@ -102,18 +107,32 @@ class Flock:
         if self.n_boids > 1000:
             raise ValueError("Please, you do not need that many boids!")
 
-    def set_random_vel(self):
+    def start_motion(self, pos_random, v_random, speed):
+        """ Places and sets the boids in motion, with a random component.
+
+        Parameters:
+        -----------
+        pos_random: random component to the boids possition
+        v_random: random component to the boids velocity direction
+        speed: The boids starting speed
+        """
         for boid in self.every:
-            boid.v.x = random.uniform(0, 5)
-            boid.v.y = random.uniform(0, 5) 
+            # Place boids with a random component.
+            boid.rect.center = (SCREEN_WIDTH/2 + randint(-pos_random, pos_random), SCREEN_HEIGHT/2 - randint(-v_random, v_random))
+            boid.v.x = uniform(0, 1)
+            boid.v.y = uniform(0, 1)
+            boid.v = speed*boid.v.normalize()
 
     def alignment(self, boids_nerby):
+        """ Align boids velocities based on it's neighbours"""
         avrage_direction = pygame.Vector2()
         for boid in boids_nerby:
              avrage_direction.x += boid.v.x
              avrage_direction.y += boid.v.y
 
         avrage_direction = avrage_direction.normalize()
+        boid.a = 2*avrage_direction
+
 
     def local_update(self):
         for boid in self.every:
@@ -121,22 +140,18 @@ class Flock:
             self.alignment(neighbours)
 
 
-
-
-
-
 if  __name__ == "__main__":
     SCREEN_WIDTH = 800
     SCREEN_HEIGHT = 800
-    FPS = 60
+    FPS = 10
 
     clock = pygame.time.Clock()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
-    boid_surf = pygame.Surface((32, 32))
+    boid_surf = pygame.Surface((10, 10))
     boid_surf.fill((255, 0, 255))
-    my_flock = Flock(5, boid_surf)
-    my_flock.set_random_vel()
+    my_flock = Flock(10, boid_surf)
+    my_flock.start_motion(100, 100, 5)
     my_flock.local_update()
 
     RUNNING = True
@@ -151,6 +166,14 @@ if  __name__ == "__main__":
                 RUNNING = False
 
         screen.fill((0, 0, 0))
+        my_flock.local_update()
         my_flock.group.update()
         my_flock.group.draw(screen)
+
+        # TODO: make this into a method.
+        for boid in my_flock.every:
+            pygame.draw.line(screen, (255, 0, 0), boid.rect.center, (boid.rect.centerx +20* boid.v.x, boid.rect.centery + 20*boid.v.y), width = 2)
+            pygame.draw.line(screen, (0, 255, 0), boid.rect.center, (boid.rect.centerx +20* boid.a.x, boid.rect.centery + 20*boid.a.y), width = 2)
+
+
         pygame.display.flip()
