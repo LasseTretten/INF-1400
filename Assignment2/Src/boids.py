@@ -11,8 +11,8 @@ pygame.init()
 class Boid(SpriteMe):
     """ Class representing the boids"""
 
-    def __init__(self, surface):
-        super().__init__(surface)
+    def __init__(self, boid_surface):
+        super().__init__(boid_surface)
         # Velocitry
         self.v = pygame.Vector2()
 
@@ -91,20 +91,29 @@ class Boid(SpriteMe):
             self.rect.top = height - self.rect.width
         elif self.rect.bottom >= height:
             self.rect.bottom = self.rect.width
-            
+
 
 class Flock:
     """Container class for multiple boids."""
-    def __init__(self, n_boids, surface):
-        self.surface = surface
-        self.n_boids = n_boids
+    def __init__(self, n_boids, n_predators, boid_surf, predator_surf):
+        self.boid_surface = boid_surf
+        self.predator_surface = predator_surf
 
-        self.group = pygame.sprite.Group()
+
+        self.boid_group = pygame.sprite.Group()
         self.every = []
-        for _ in range(self.n_boids):
-            boid = Boid(self.surface)
-            self.group.add(boid)
+        for _ in range(n_boids):
+            boid = Boid(self.boid_surface)
+            self.boid_group.add(boid)
             self.every.append(boid)
+
+
+        self.predator_group = pygame.sprite.Group()
+        self.every = []
+        for _ in range(n_predators):
+            predator = Boid(self.predator_surface)
+            self.predator_group.add(predator)
+            self.every.append(predator)
 
     def start_motion(self, rp, rv, speed):
         """ Places and sets the boids in motion, with a random component.
@@ -141,7 +150,7 @@ class Flock:
         boid.v += alignment_factor*(avrage_direction - boid.v)
 
     def cohesion(self, boid, neighbours, cohesion_factor):
-        """ Boids will try to group togehter. Each boid wannts to steer into the center of the flock.
+        """ Boids will try to boid_group togehter. Each boid wannts to steer into the center of the flock.
 
         Parameters:
         -----------
@@ -192,7 +201,7 @@ class Flock:
                 self.cohesion(boid, neighbours, cohesion_factor)
                 self.separation(boid, neighbours, separation_factor)
 
-            
+
 if  __name__ == "__main__":
     SCREEN_WIDTH = 800
     SCREEN_HEIGHT = 800
@@ -219,6 +228,6 @@ if  __name__ == "__main__":
 
         screen.fill((0, 0, 0))
         my_flock.local_update(0.35, 0.03, 15)
-        my_flock.group.update()
-        my_flock.group.draw(screen)
+        my_flock.boid_group.update()
+        my_flock.boid_group.draw(screen)
         pygame.display.flip()
