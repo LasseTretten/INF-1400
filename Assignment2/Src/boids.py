@@ -64,7 +64,7 @@ class Boid(SpriteMe):
             self.v.y = math.ceil(self.v.y)
 
 
-    def neighbours(self, every_boid):
+    def neighbours(self, every_boid, radius):
         """Creates a list of all nearby boids
 
         Parameters:
@@ -75,7 +75,7 @@ class Boid(SpriteMe):
         --------
         list of all nearby boids
         """
-        return [boid for boid in every_boid if self.close_to(boid)]
+        return [boid for boid in every_boid if self.close_to(boid, radius)]
 
     def check_wall(self):
         """Makes is possible for the boids to fly trough the wall.
@@ -97,7 +97,7 @@ class Boid(SpriteMe):
 
 class Flock:
     """Container class for multiple boids."""
-    def __init__(self, n_boids, n_predators, boid_surf, predator_surf, screen_size):
+    def __init__(self, n_boids, n_predators, boid_surf, predator_surf, screen_size, boids_behaviour, predators_behaviour):
         self.boid_surface = boid_surf
         self.predator_surface = predator_surf
 
@@ -117,7 +117,9 @@ class Flock:
             self.predator_group.add(predator)
             self.every_predator.append(predator)
 
-        self.flying_creatures = [self.every_predator, self.every_boid]
+        self.flying_creatures = [self.every_boid, self.every_predator]
+
+        self.flying_creatures_behaviour = (boids_behaviour, predators_behaviour)
 
     def set_initial(self, flying_creature, rp, rv, speed):
         flying_creature.rect.center = (SCREEN_WIDTH/2 + randint(-rp, rp),
@@ -192,7 +194,16 @@ class Flock:
         sep_vec = (separation_factor/len(neighbours))*sep_vec
         boid.v += sep_vec
 
-    def local_update(self, alignment_factor, cohesion_factor, separation_factor):
+    def calculate_v(self, creature, behaviour, creatures, radius):
+        creature.check_wall()
+        neighbours = creature.neighbours(creatures, radius)
+        if len(neighbours) > 0:
+            self.alignment(creature, neighbours, behaviour[0])
+            self.cohesion(creature, neighbours, behaviour[1])
+            self.separation(creature, neighbours, behaviour[2])
+        
+
+    def local_update(self):
         """Updates alignment, cohesion and sepetration.
 
         Parameters:
@@ -201,21 +212,29 @@ class Flock:
         cohesion_factor: determines how strong the cohesion effect shall be.
         separation: determines how strong the separation effect shall be.
         """
-        for creatures in self.flying_creatures:
-            for creature in creatures:
-                creature.check_wall()
-                neighbours = creature.neighbours(creatures)
-                if len(neighbours) > 0:
-                    self.alignment(creature, neighbours, alignment_factor)
-                    self.cohesion(creature, neighbours, cohesion_factor)
-                    self.separation(creature, neighbours, separation_factor)
 
+        i = 0
+        for creatures, behaviour in zip(self.flying_creatures, self.flying_creatures_behaviour):
+            for creature in creatures:
+                self.calculate_v(creature, behaviour[0], creatures, 50)
+                self.calculate_v(creature, behaviour[1], self.flying_creatures[(i + 1) % 2], 100)
+                creature.check_wall() 
+            i += 1
 
 if  __name__ == "__main__":
-    SCREEN_WIDTH = 800
-    SCREEN_HEIGHT = 800
+    SCREEN_WIDTH = 2000
+    SCREEN_HEIGHT = 1200
     FPS = 30
 
+    boids_to_boids = (0.50, 0.05, 15)
+    boids_to_predators = (-0.75, 0, 50)
+
+    predators_to_predators = (0.35, -0.01, 15)
+    predators_to_boids = (0.35, 0.03, -15)
+    
+    boids_behaviour = (boids_to_boids, boids_to_predators)
+    predators_behaviour = (predators_to_predators, predators_to_boids)
+    
     clock = pygame.time.Clock()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
@@ -223,7 +242,7 @@ if  __name__ == "__main__":
     boid_surf.fill((255, 0, 255))
     predator_surf = pygame.Surface((20, 20))
     predator_surf.fill((0, 255, 255))
-    my_flock = Flock(25, 25, boid_surf, predator_surf, (SCREEN_WIDTH, SCREEN_HEIGHT))
+    my_flock = Flock(50, 2, boid_surf, predator_surf, (SCREEN_WIDTH, SCREEN_HEIGHT), boids_behaviour, predators_behaviour)
     my_flock.start_motion(150, 200, 10)
 
     RUNNING = True
@@ -238,7 +257,7 @@ if  __name__ == "__main__":
                 RUNNING = False
 
         screen.fill((0, 0, 0))
-        my_flock.local_update(0.35, 0.03, 15)
+        my_flock.local_update()
         my_flock.boid_group.update()
         my_flock.predator_group.update()
         my_flock.boid_group.draw(screen)
