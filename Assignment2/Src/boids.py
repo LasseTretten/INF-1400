@@ -88,7 +88,7 @@ class Boid(SpriteMe):
         elif self.rect.right >= width:
             self.rect.right = self.rect.width
         elif self.rect.top <= 0:
-            self.rect.top = height - self.rect.widthmag
+            self.rect.top = height - self.rect.width
         elif self.rect.bottom >= height:
             self.rect.bottom = self.rect.width
             
