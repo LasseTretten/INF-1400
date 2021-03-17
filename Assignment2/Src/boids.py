@@ -11,8 +11,10 @@ pygame.init()
 class Boid(SpriteMe):
     """ Class representing the boids"""
 
-    def __init__(self, boid_surface):
+    def __init__(self, boid_surface, screen_size):
         super().__init__(boid_surface)
+        self.screen_width = screen_size[0]
+        self.screen_height = screen_size[1]
         # Velocitry
         self.v = pygame.Vector2()
 
@@ -75,7 +77,7 @@ class Boid(SpriteMe):
         """
         return [boid for boid in every_boid if self.close_to(boid)]
 
-    def check_wall(self, width, height):
+    def check_wall(self):
         """Makes is possible for the boids to fly trough the wall.
 
         Parameters:
@@ -84,36 +86,46 @@ class Boid(SpriteMe):
         height: height of the screen
         """
         if self.rect.left <= 0:
-            self.rect.left = width - self.rect.width
-        elif self.rect.right >= width:
+            self.rect.left = self.screen_width - self.rect.width
+        elif self.rect.right >= self.screen_width:
             self.rect.right = self.rect.width
         elif self.rect.top <= 0:
-            self.rect.top = height - self.rect.width
-        elif self.rect.bottom >= height:
+            self.rect.top = self.screen_height - self.rect.width
+        elif self.rect.bottom >= self.screen_height:
             self.rect.bottom = self.rect.width
 
 
 class Flock:
     """Container class for multiple boids."""
-    def __init__(self, n_boids, n_predators, boid_surf, predator_surf):
+    def __init__(self, n_boids, n_predators, boid_surf, predator_surf, screen_size):
         self.boid_surface = boid_surf
         self.predator_surface = predator_surf
 
 
         self.boid_group = pygame.sprite.Group()
-        self.every = []
+        self.every_boid = []
         for _ in range(n_boids):
-            boid = Boid(self.boid_surface)
+            boid = Boid(self.boid_surface, screen_size)
             self.boid_group.add(boid)
-            self.every.append(boid)
+            self.every_boid.append(boid)
 
 
         self.predator_group = pygame.sprite.Group()
-        self.every = []
+        self.every_predator = []
         for _ in range(n_predators):
-            predator = Boid(self.predator_surface)
+            predator = Boid(self.predator_surface, screen_size)
             self.predator_group.add(predator)
-            self.every.append(predator)
+            self.every_predator.append(predator)
+
+        self.flying_creatures = [self.every_predator, self.every_boid]
+
+    def set_initial(self, flying_creature, rp, rv, speed):
+        flying_creature.rect.center = (SCREEN_WIDTH/2 + randint(-rp, rp),
+                                SCREEN_HEIGHT/2 - randint(-rv, rv))
+        flying_creature.v.x = uniform(-1, 1)
+        flying_creature.v.y = uniform(-1, 1)
+        flying_creature.v = speed*flying_creature.v
+
 
     def start_motion(self, rp, rv, speed):
         """ Places and sets the boids in motion, with a random component.
@@ -124,13 +136,9 @@ class Flock:
         rv: random component to the boids velocity direction
         speed: set the boid's speed
         """
-        for boid in self.every:
-            # Place boids with a random component.
-            boid.rect.center = (SCREEN_WIDTH/2 + randint(-rp, rp),
-                                SCREEN_HEIGHT/2 - randint(-rv, rv))
-            boid.v.x = uniform(-1, 1)
-            boid.v.y = uniform(-1, 1)
-            boid.v = speed*boid.v
+        [self.set_initial(boid, rp, rv, speed) for boid in self.every_boid]
+        [self.set_initial(predator, rp, rv, speed) for predator in self.every_predator]
+
 
     def alignment(self, boid, neighbours, alignment_factor):
         """ Align boids velocities based on it's neighbours.
@@ -193,13 +201,14 @@ class Flock:
         cohesion_factor: determines how strong the cohesion effect shall be.
         separation: determines how strong the separation effect shall be.
         """
-        for boid in self.every:
-            boid.check_wall(1400, 1400)
-            neighbours = boid.neighbours(self.every)
-            if len(neighbours) > 0:
-                self.alignment(boid, neighbours, alignment_factor)
-                self.cohesion(boid, neighbours, cohesion_factor)
-                self.separation(boid, neighbours, separation_factor)
+        for creatures in self.flying_creatures:
+            for creature in creatures:
+                creature.check_wall()
+                neighbours = creature.neighbours(creatures)
+                if len(neighbours) > 0:
+                    self.alignment(creature, neighbours, alignment_factor)
+                    self.cohesion(creature, neighbours, cohesion_factor)
+                    self.separation(creature, neighbours, separation_factor)
 
 
 if  __name__ == "__main__":
@@ -212,7 +221,9 @@ if  __name__ == "__main__":
 
     boid_surf = pygame.Surface((10, 10))
     boid_surf.fill((255, 0, 255))
-    my_flock = Flock(25, boid_surf)
+    predator_surf = pygame.Surface((20, 20))
+    predator_surf.fill((0, 255, 255))
+    my_flock = Flock(25, 25, boid_surf, predator_surf, (SCREEN_WIDTH, SCREEN_HEIGHT))
     my_flock.start_motion(150, 200, 10)
 
     RUNNING = True
@@ -229,5 +240,7 @@ if  __name__ == "__main__":
         screen.fill((0, 0, 0))
         my_flock.local_update(0.35, 0.03, 15)
         my_flock.boid_group.update()
+        my_flock.predator_group.update()
         my_flock.boid_group.draw(screen)
+        my_flock.predator_group.draw(screen)
         pygame.display.flip()
