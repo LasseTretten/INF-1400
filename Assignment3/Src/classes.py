@@ -24,12 +24,16 @@ class SpriteThis(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
 
     def surf_rotate(self, deg):
+        """Rotates the image and updates the hitbox.
+
+        Parameters:
+        -----------
+        deg: Degrees per frame.
+        """
         center = self.rect.center
         self.image = pygame.transform.rotate(self.image_org, deg)
         self.rect = self.image.get_rect()
         self.rect.center = center
-
-
 
 class Ship(SpriteThis):
     """Base class for the space ships
