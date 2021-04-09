@@ -61,7 +61,9 @@ class Ship(SpriteThis):
             self.speed += f
         elif self.speed > f:
             self.speed -= f
-
+        else:
+            self.speed = 0
+            
     def update(self, rot_sense = 4, v_sense = 1.5, v_max = 10):
         """Updates the possition of the ship according to user input.
 
@@ -100,7 +102,7 @@ if __name__ == "__main__":
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     ships = pygame.sprite.Group()
 
-    ship = Ship("../Artwork/PNG/playerShip2_green.png",)
+    ship = Ship("../Artwork/PNG/playerShip2_green.png", scale = 0.5)
     ships.add(ship)
 
 
