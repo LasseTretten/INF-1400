@@ -1,6 +1,7 @@
 """Assignment3 INF-1400.
 This is the main program for the space ship game.
 """
+import numpy as np
 import pygame
 pygame.init()
 
@@ -15,7 +16,7 @@ class SpriteThis(pygame.sprite.Sprite):
     """
     def __init__(self, path, scale = 1):
         super().__init__()
-        surface = pygame.image.load(path).convert()
+        surface = pygame.image.load(path).convert_alpha()
         figure = pygame.Surface(surface.get_size())
         figure.set_colorkey((0, 0, 0))
         figure.scroll(500, 100)
@@ -55,10 +56,11 @@ class Ship(SpriteThis):
         self.v_unit.x = 0
         self.v_unit.y = 1
         self.speed = 0
+        self.max_speed = 6
         self.rot = 0
 
     def friction(self, f = 0.2):
-        """Adds friction to the ships motion
+        """Adds friction to the ship's motion
 
         Parameters:
         -----------
@@ -71,18 +73,17 @@ class Ship(SpriteThis):
         else:
             self.speed = 0
 
-    def update(self, rot_sense = 5, v_sense = 1.5, v_max = 10):
+    def update(self, rot_sense = 4, v_sense = 0.6):
         """Updates the possition of the ship according to user input.
 
         Parameters:
         -----------
         rot_sense: Determines how fast the ship rotates
         v_sense: Determines the ships acceleration
-        v_max: Determines the ships top speed.
         """
-        if pressed[pygame.K_UP] and self.speed > -v_max:
+        if pressed[pygame.K_UP] and self.speed > -self.max_speed:
             self.speed -= v_sense
-        if pressed[pygame.K_DOWN] and self.speed < v_max/2:
+        if pressed[pygame.K_DOWN] and self.speed < self.max_speed/2:
             self.speed += v_sense/2
         if pressed[pygame.K_LEFT]:
             self.v_unit = self.v_unit.rotate(-rot_sense)
@@ -100,7 +101,7 @@ class Ship(SpriteThis):
         self.rect.centery += self.v.y
 
     def shoot(self):
-        """ Makes the ship fire a bullet """
+        """ Makes the ship fire a bullet."""
         bullet = Bullet("../Artwork/PNG/Lasers/laserGreen04.png")
         bullets.add(bullet)
         all_sprites.add(bullet)
@@ -122,8 +123,9 @@ class Bullet(SpriteThis):
         self.v_unit = pygame.Vector2()
         self.v_unit.x = 0
         self.v_unit.y = 1
-        self.speed = 10
+        self.speed = 8
         self.rot = 0
+        self.life = 100
 
     def update(self):
         """Updates the bullet's possition. The sprite is killed after it disappears from the screen."""
@@ -138,10 +140,53 @@ class Bullet(SpriteThis):
             self.kill()
 
 
-# This part is only for manual testing.
+def proj(v, w):
+    """ Calculates the ortogonal projection of v onto w
+
+    Parameters:
+    -----------
+    v: numpy.ndarray
+    w: numpy.ndarray
+
+    Return:
+    -------
+    numpy.ndarray
+    """
+    if type(v) != np.ndarray or type(w) != np.ndarray:
+        raise ValueError("Both arguments v and w must be of type np.ndarray")
+    if len(v) != len(w):
+        raise IndexError("Both arguments v and w must be of the same dimension")
+
+    return ((np.dot(v, w))/(np.dot(w, w)))*w
+
+
+# fix: PLEASE REFACTOR ME.
+# doc: add doc string
+# doc: explain the "collission-bounce algorithm" you so cleverly have come up with.
+# doc: explain why you have chosen circular hitboxes and the scale factor.
+def check_collision():
+    ships_obsticals = pygame.sprite.groupcollide(ships, obstacles, False, False, pygame.sprite.collide_circle_ratio(0.7))
+    if ships_obsticals:
+        projections = []
+        for ship in ships_obsticals:
+            for obstacle in ships_obsticals[ship]:
+                ship_obstacle_vec = np.array((obstacle.rect.centerx - ship.rect.centerx, obstacle.rect.centery - ship.rect.centery))
+                projection = proj(np.array(ship.v), ship_obstacle_vec)
+                if np.linalg.norm(projection) > 0.9*ship.max_speed:
+                    ship.kill()
+                else:
+                    # Refactor
+                    bounce_vec = pygame.Vector2()
+                    bounce_vec.x = -projection[0]
+                    bounce_vec.y = -projection[1]
+                    bounce_vec = bounce_vec.normalize()
+                    ship.rect.centerx += int(20*bounce_vec.x)
+                    ship.rect.centery += int(20*bounce_vec.y)
+                    
+                    
 if __name__ == "__main__":
-    SCREEN_HEIGHT = 1200
     SCREEN_WIDTH = 1400
+    SCREEN_HEIGHT = 1200
     FPS = 60
 
     clock = pygame.time.Clock()
@@ -151,6 +196,7 @@ if __name__ == "__main__":
     all_sprites = pygame.sprite.Group()
     ships = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
+    obstacles = pygame.sprite.Group()
 
     ### SHIPS ###
     ship1 = Ship("../Artwork/PNG/playerShip2_green.png", scale = 0.5)
@@ -161,6 +207,13 @@ if __name__ == "__main__":
     ### BACKGROUND ###
     backgound = pygame.image.load("../Artwork/Backgrounds/blue.png").convert()
     backgound = pygame.transform.smoothscale(backgound, (SCREEN_WIDTH, SCREEN_HEIGHT))
+
+
+    ### OBSTACLES ###
+    moon = SpriteThis("../Artwork/SpaceCC0/deadPlanet.png", scale = 0.2)
+    moon.rect.center = (250, 250)
+    obstacles.add(moon)
+    all_sprites.add(moon)
 
     # Game loop
     RUNNING  = True
@@ -175,9 +228,10 @@ if __name__ == "__main__":
 
             pressed = pygame.key.get_pressed()
             if pressed[pygame.K_ESCAPE]:
-                 RUNNING = False
+                RUNNING = False
 
-        screen.blit(backgound, (0, 0))
+        check_collision()
+        screen.blit(backgound, (0,0))
         all_sprites.update()
         all_sprites.draw(screen)
         pygame.display.flip()
