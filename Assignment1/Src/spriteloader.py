@@ -1,5 +1,43 @@
+"""This is a module contains a framwork which makes it easy to cast  image files, pygame.Srufacees and spritesheets to pygame sprite objects """
+
 import pygame
 pygame.init()
+
+
+class SpriteThis(pygame.sprite.Sprite):
+    """ Creates a pygame.sprite.Sprite object from an image file
+
+    Parameters:
+    -----------
+    path: path to the image file
+    scale: scale factor
+    """
+    def __init__(self, path, scale = 1):
+        super().__init__()
+        surface = pygame.image.load(path).convert_alpha()
+        figure = pygame.Surface(surface.get_size())
+        figure.set_colorkey((0, 0, 0))
+        figure.blit(surface, (0, 0))
+        # Orginal Surface
+        self.image_org = pygame.transform.scale(figure, (int(scale*figure.get_width()), int(scale*figure.get_height())))
+        # Makes a copy of the orginal surface.
+        # Instead of rotating the same image multiple times (see method surf_rotate), we overwrite the copy.
+        # All transformation is then done on self.image_org.
+        # Multiple transformation on the same image will damage the quality.
+        self.image = self.image_org
+        self.rect = self.image.get_rect()
+
+    def surf_rotate(self, deg):
+        """Rotates the image and updates the hitbox.
+
+        Parameters:
+        -----------
+        deg: Degrees per frame.
+        """
+        center = self.rect.center
+        self.image = pygame.transform.rotate(self.image_org, deg)
+        self.rect = self.image.get_rect()
+        self.rect.center = center
 
 class SpriteMe(pygame.sprite.Sprite):
     """ Creates pygame.sprite.Sprite object from a pygame.Surface
@@ -46,7 +84,9 @@ class SpriteSheet:
         figure.blit(self.sprite_sheet, (0, 0), (x, y, w, h))
         figure = pygame.transform.scale(figure, (int(scale*w), int(scale*h)))
         return figure 
-         
+
+
+# This part is only for manual testing. 
 if __name__ == "__main__":
     SCREEN_HEIGHT = 800
     SCREEN_WIDTH = 1000
