@@ -1,46 +1,10 @@
 """Assignment3 INF-1400.
 This is the main program for the space ship game.
 """
-import numpy as np
+from spriteloader import SpriteMe, SpriteThis
 import pygame
 pygame.init()
 
-
-class SpriteThis(pygame.sprite.Sprite):
-    """ Creates a pygame.sprite.Sprite object from an image file
-
-    Parameters:
-    -----------
-    path: path to the image file
-    scale: scale factor
-    """
-    def __init__(self, path, scale = 1):
-        super().__init__()
-        surface = pygame.image.load(path).convert_alpha()
-        figure = pygame.Surface(surface.get_size())
-        figure.set_colorkey((0, 0, 0))
-        figure.scroll(500, 100)
-        figure.blit(surface, (0, 0))
-        # Orginal Surface
-        self.image_org = pygame.transform.scale(figure, (int(scale*figure.get_width()), int(scale*figure.get_height())))
-        # Makes a copy of the orginal surface.
-        # Instead of rotating the same image multiple times (see method surf_rotate), we overwrite the copy.
-        # All transformation is then done on self.image_org.
-        # Multiple transformation on the same image will damage the quality.
-        self.image = self.image_org
-        self.rect = self.image.get_rect()
-
-    def surf_rotate(self, deg):
-        """Rotates the image and updates the hitbox.
-
-        Parameters:
-        -----------
-        deg: Degrees per frame.
-        """
-        center = self.rect.center
-        self.image = pygame.transform.rotate(self.image_org, deg)
-        self.rect = self.image.get_rect()
-        self.rect.center = center
 
 class Ship(SpriteThis):
     """Base class for the space ships
@@ -79,7 +43,7 @@ class Ship(SpriteThis):
         Parameters:
         -----------
         rot_sense: Determines how fast the ship rotates
-        v_sense: Determines the ships acceleration
+        v_sense: Determines the ship's acceleration
         """
         if pressed[pygame.K_UP] and self.speed > -self.max_speed:
             self.speed -= v_sense
@@ -140,50 +104,80 @@ class Bullet(SpriteThis):
             self.kill()
 
 
+class TextBox(SpriteMe):
+    def __init__(self, text, pos, col, f = "freesansbold.ttf", size = 20):
+        font = pygame.font.Font(f, size)
+        surf = font.render(text, True, col)
+        super().__init__(surf)
+        self.rect.x, self.rect.y = pos[0], pos[1]
+
+
+class HealthBar(SpriteThis):
+    def __init__(self, path = "../Artwork/Healthbar/health_bar15.png", pos = (15, 20), name = "", scale = 0.37,):
+        super().__init__(path, scale)
+        self.health = 15
+        self.rect.x, self.rect.y = pos
+        self.text_box = TextBox(name, (self.rect.x + 10, self.rect.y - 10), (255, 255, 255))
+
+        try:
+            text_boxes.add(self.text_box)
+        except:
+            text_boxes = pygame.sprite.Group()
+            print("A sprite group named text_boxes were made")
+
+        try:
+            all_sprites.add(self.text_box)
+        except:
+            print("Lasse")
+
+    def is_empty(self):
+        if self.life <= 0:
+            return True
+        else:
+            return False
+
+    def reduce_health(self, amount = 1):
+        self.health -= amount
+        self.__init__("../Artwork/Healthbar/health_bar" + str(self.health) + ".png")
+        
+
 def proj(v, w):
     """ Calculates the ortogonal projection of v onto w
 
     Parameters:
     -----------
-    v: numpy.ndarray
-    w: numpy.ndarray
+    v: pygame.Vector2
+    w: pygame.Vector2
 
     Return:
     -------
-    numpy.ndarray
+    pygame.Vector2
     """
-    if type(v) != np.ndarray or type(w) != np.ndarray:
-        raise ValueError("Both arguments v and w must be of type np.ndarray")
-    if len(v) != len(w):
-        raise IndexError("Both arguments v and w must be of the same dimension")
-
-    return ((np.dot(v, w))/(np.dot(w, w)))*w
+    if isinstance(v, pygame.math.Vector2) and isinstance(w, pygame.math.Vector2):
+        return ((v.dot(w))/(w.dot(w)))*w
+    else:
+        raise TypeError("Both arguments v and W must be an instance of pygame.math.Vector2")
 
 
-# fix: PLEASE REFACTOR ME.
 # doc: add doc string
 # doc: explain the "collission-bounce algorithm" you so cleverly have come up with.
 # doc: explain why you have chosen circular hitboxes and the scale factor.
 def check_collision():
     ships_obsticals = pygame.sprite.groupcollide(ships, obstacles, False, False, pygame.sprite.collide_circle_ratio(0.7))
     if ships_obsticals:
-        projections = []
         for ship in ships_obsticals:
             for obstacle in ships_obsticals[ship]:
-                ship_obstacle_vec = np.array((obstacle.rect.centerx - ship.rect.centerx, obstacle.rect.centery - ship.rect.centery))
-                projection = proj(np.array(ship.v), ship_obstacle_vec)
-                if np.linalg.norm(projection) > 0.9*ship.max_speed:
+                ship_to_obstacle = pygame.Vector2((obstacle.rect.centerx - ship.rect.centerx, obstacle.rect.centery - ship.rect.centery))
+                # This vector measures how "critical" the collission is.
+                projection = proj(ship.v, ship_to_obstacle)
+                if projection.length() > 0.9*ship.max_speed:
                     ship.kill()
                 else:
-                    # Refactor
-                    bounce_vec = pygame.Vector2()
-                    bounce_vec.x = -projection[0]
-                    bounce_vec.y = -projection[1]
-                    bounce_vec = bounce_vec.normalize()
-                    ship.rect.centerx += int(20*bounce_vec.x)
-                    ship.rect.centery += int(20*bounce_vec.y)
-                    
-                    
+                    bounce = -projection.normalize()
+                    ship.rect.centerx += int(15*bounce.x)
+                    ship.rect.centery += int(15*bounce.y)
+
+
 if __name__ == "__main__":
     SCREEN_WIDTH = 1400
     SCREEN_HEIGHT = 1200
@@ -214,6 +208,17 @@ if __name__ == "__main__":
     moon.rect.center = (250, 250)
     obstacles.add(moon)
     all_sprites.add(moon)
+
+    ### TOP BAR ###
+    top_bar = pygame.Surface((SCREEN_WIDTH, 60))
+    top_bar.fill((0, 0, 51))
+    top_bar = SpriteMe(top_bar)
+    all_sprites.add(top_bar)
+
+    ### TESTING ###
+    bar = HealthBar(name = "Lasse")
+    all_sprites.add(bar)
+
 
     # Game loop
     RUNNING  = True
