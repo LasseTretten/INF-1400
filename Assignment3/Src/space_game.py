@@ -14,14 +14,26 @@ class Ship(SpriteThis):
     path: path to the image file
     scale: scale factor
     """
-    def __init__(self, path, scale = 1):
-        super().__init__(path, scale)
+    def __init__(self, player, scale = 1):
+        if player == 1:
+            self.keys = [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_RSHIFT]
+            self.path = "../Artwork/PNG/playerShip1_green.png"
+            super().__init__(self.path, scale)
+            self.rect.center = (100, SCREEN_HEIGHT/2)
+            self.health_bar = HealthBar(pos = (15, 20))
+        elif player == 2:
+            self.keys = [pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_SPACE]
+            self.path = "../Artwork/PNG/playerShip1_red.png"
+            super().__init__(self.path, scale)
+            self.rect.center = (SCREEN_WIDTH - 100, SCREEN_HEIGHT/2)
+            self.health_bar = HealthBar(pos = (SCREEN_WIDTH - 160, 20))
+        else:
+            raise ValueError("Player input must be either 1 or 2.")
+
         self.v_unit = pygame.Vector2((0,1))
         self.speed = 0
         self.max_speed = 6
         self.rot = 0
-        self.rect.center = (SCREEN_WIDTH/2, SCREEN_HEIGHT/2)
-        self.health_bar = HealthBar()
 
     def friction(self, f = 0.2):
         """Adds friction to the ship's motion
@@ -45,15 +57,15 @@ class Ship(SpriteThis):
         rot_sense: Determines how fast the ship rotates
         v_sense: Determines the ship's acceleration
         """
-        if pressed[pygame.K_UP] and self.speed > -self.max_speed:
+        if pressed[self.keys[0]] and self.speed > -self.max_speed:
             self.speed -= v_sense
-        if pressed[pygame.K_DOWN] and self.speed < self.max_speed/2:
+        if pressed[self.keys[1]] and self.speed < self.max_speed/2:
             self.speed += v_sense/2
-        if pressed[pygame.K_LEFT]:
+        if pressed[self.keys[2]]:
             self.v_unit = self.v_unit.rotate(-rot_sense)
             self.rot += rot_sense
             self.surf_rotate(self.rot)
-        if pressed[pygame.K_RIGHT]:
+        if pressed[self.keys[3]]:
             self.v_unit = self.v_unit.rotate(rot_sense)
             self.rot -= rot_sense
             self.surf_rotate(self.rot)
@@ -129,10 +141,16 @@ class Bullet(SpriteThis):
 
 
 class Player:
-    def __init__(self, name):
-        self.ship = Ship("../Artwork/PNG/playerShip2_green.png", scale = 0.5)
-        self.name_tag = TextBox(str(name), (self.ship.health_bar.rect.x + 10, self.ship.health_bar.rect.y - 10))
+    def __init__(self, name, player):
 
+        if player == 1:
+            self.ship = Ship(player, scale = 0.5)
+            self.name_tag = TextBox(str(name), (self.ship.health_bar.rect.x + 10, self.ship.health_bar.rect.y - 10))
+        elif player == 2:
+            self.ship = Ship(player, scale = 0.5)
+            self.name_tag = TextBox(str(name), (self.ship.health_bar.rect.x + 10, self.ship.health_bar.rect.y - 10))
+            
+            
         try:
             ships.add(self.ship)
         except:
@@ -207,9 +225,7 @@ def check_collision_ship_wall(bounce = 15):
         for ship in collided_top_wall:
             ship.rect.centery += bounce
             ship.health_bar.reduce_health()
-            
-    
-        
+                
 
 if __name__ == "__main__":
     SCREEN_WIDTH = 1400
@@ -250,13 +266,12 @@ if __name__ == "__main__":
     right_wall.rect.x = SCREEN_WIDTH - 5
     bottom_wall = SpriteMe(pygame.Surface((SCREEN_WIDTH, 5)))
     bottom_wall.rect.y = SCREEN_HEIGHT - 5
- 
-    
-    #all_sprites.add(left_wall, right_wall, bottom_wall)
+
     
 
     
-    player1 = Player("Lasse")
+    player1 = Player("Lasse", 1)
+    player2 = Player("Elias", 2)
     # Game loop
     RUNNING  = True
     while RUNNING:
