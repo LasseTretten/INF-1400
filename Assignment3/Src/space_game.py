@@ -22,7 +22,7 @@ class Ship(SpriteThis):
             self.rect.center = (100, SCREEN_HEIGHT/2)
             self.health_bar = HealthBar(pos = (15, 20))
         elif player == 2:
-            self.keys = [pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_SPACE]
+            self.keys = [pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_RALT]
             self.path = "../Artwork/PNG/playerShip1_red.png"
             super().__init__(self.path, scale)
             self.rect.center = (SCREEN_WIDTH - 100, SCREEN_HEIGHT/2)
@@ -34,6 +34,7 @@ class Ship(SpriteThis):
         self.speed = 0
         self.max_speed = 6
         self.rot = 0
+        self.flag = 1
 
     def friction(self, f = 0.2):
         """Adds friction to the ship's motion
@@ -70,6 +71,13 @@ class Ship(SpriteThis):
             self.rot -= rot_sense
             self.surf_rotate(self.rot)
 
+        if event.type == pygame.KEYDOWN and self.flag == 1:
+            if event.key == self.keys[4]:
+                self.shoot()
+                self.flag = 0
+        if event.type == pygame.KEYUP:
+            self.flag = 1
+
         self.friction()
         self.rot = self.rot % 360
         self.v = self.speed*self.v_unit
@@ -85,7 +93,6 @@ class Ship(SpriteThis):
         bullet.surf_rotate(self.rot)
 
         if pressed[pygame.K_UP]:
-
             bullet.speed += 0.5*abs(self.speed)
         elif pressed[pygame.K_DOWN]:
             bullet.speed -= 0.5*abs(self.speed)
@@ -151,8 +158,8 @@ class Player:
         elif player == 2:
             self.ship = Ship(player, scale = 0.5)
             self.name_tag = TextBox(str(name), (self.ship.health_bar.rect.x + 10, self.ship.health_bar.rect.y - 10))
-            
-            
+
+
         try:
             ships.add(self.ship)
         except:
@@ -204,7 +211,7 @@ def check_collision_ship_planet():
                     print
                     ("check_collision_ship_planet function did not work as expected.")
                     pass
-                
+
 
 def check_collision_ship_wall(bounce = 15):
     collided_left_wall = pygame.sprite.spritecollide(left_wall, ships, False)
@@ -227,7 +234,7 @@ def check_collision_ship_wall(bounce = 15):
         for ship in collided_top_wall:
             ship.rect.centery += bounce
             ship.health_bar.reduce_health()
-                
+
 
 if __name__ == "__main__":
     SCREEN_WIDTH = 1400
@@ -269,9 +276,7 @@ if __name__ == "__main__":
     bottom_wall = SpriteMe(pygame.Surface((SCREEN_WIDTH, 5)))
     bottom_wall.rect.y = SCREEN_HEIGHT - 5
 
-    
 
-    
     player1 = Player("Lasse", 1)
     player2 = Player("Elias", 2)
     # Game loop
@@ -281,17 +286,13 @@ if __name__ == "__main__":
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 RUNNING = False
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    player1.ship.shoot()
-
             pressed = pygame.key.get_pressed()
             if pressed[pygame.K_ESCAPE]:
                 RUNNING = False
 
         check_collision_ship_planet()
         check_collision_ship_wall()
-        
+
         screen.blit(backgound, (0,0))
         all_sprites.update()
         all_sprites.draw(screen)
