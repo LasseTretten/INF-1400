@@ -106,7 +106,8 @@ class HealthBar(SpriteThis):
     def __init__(self, path = "../Artwork/Healthbar/health_bar15.png", pos = (15, 20), scale = 0.37):
         super().__init__(path, scale)
         self.health = 15
-        self.rect.x, self.rect.y = pos
+        self.pos = pos
+        self.rect.x, self.rect.y = self.pos
 
     def is_empty(self):
         if self.life <= 0:
@@ -116,7 +117,8 @@ class HealthBar(SpriteThis):
 
     def reduce_health(self, amount = 1):
         self.health -= amount
-        super().__init__("../Artwork/Healthbar/health_bar" + str(self.health) + ".png", 0.37)
+        super().__init__("../Artwork/Healthbar/health_bar" + str(self.health) + ".png", scale = 0.37)
+        self.rect.x, self.rect.y = self.pos
 
 
 class Bullet(SpriteThis):
