@@ -8,7 +8,6 @@ pygame.init()
 
 class Ship(SpriteThis):
     """Base class for the space ships
-
     Parameters:
     -----------
     path: path to the image file
@@ -20,13 +19,15 @@ class Ship(SpriteThis):
             self.path = "../Artwork/PNG/playerShip1_green.png"
             super().__init__(self.path, scale)
             self.rect.center = (100, SCREEN_HEIGHT/2)
-            self.health_bar = HealthBar(pos = (15, 20))
+            self.health_bar_pos = (15, 20)
+            self.health_bar = HealthBar(pos = self.health_bar_pos)
         elif player == 2:
             self.keys = [pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_RALT]
             self.path = "../Artwork/PNG/playerShip1_red.png"
             super().__init__(self.path, scale)
             self.rect.center = (SCREEN_WIDTH - 100, SCREEN_HEIGHT/2)
-            self.health_bar = HealthBar(pos = (SCREEN_WIDTH - 160, 20))
+            self.health_bar_pos = (SCREEN_WIDTH - 250, 20)
+            self.health_bar = HealthBar(pos = self.health_bar_pos)
         else:
             raise ValueError("Player input must be either 1 or 2.")
 
@@ -38,7 +39,6 @@ class Ship(SpriteThis):
 
     def friction(self, f = 0.2):
         """Adds friction to the ship's motion
-
         Parameters:
         -----------
         f: Friction coefficient
@@ -100,36 +100,31 @@ class Ship(SpriteThis):
         bullet.v_unit = bullet.v_unit.rotate(180 - self.rot)
 
 
-    # doc: Add doc string
 class TextBox(SpriteMe):
+    """Create textbox as sprite objects
+
+    Parameters:
+    -----------
+    text: text to be displayed
+    pos: postition
+    col: RGB color code
+    f: font type
+    size: size
+    """
     def __init__(self, text, pos, col = (255, 255, 255), f = "freesansbold.ttf", size = 20):
         font = pygame.font.Font(f, size)
         surf = font.render(text, True, col)
         super().__init__(surf)
         self.rect.x, self.rect.y = pos[0], pos[1]
 
-    # doc: Add doc string
-class HealthBar(SpriteThis):
-    def __init__(self, path = "../Artwork/Healthbar/health_bar15.png", pos = (15, 20), scale = 0.37):
-        super().__init__(path, scale)
-        self.health = 15
-        self.pos = pos
-        self.rect.x, self.rect.y = self.pos
-
-    def is_empty(self):
-        if self.life <= 0:
-            return True
-        else:
-            return False
-
-    def reduce_health(self, amount = 1):
-        self.health -= amount
-        super().__init__("../Artwork/Healthbar/health_bar" + str(self.health) + ".png", scale = 0.37)
-        self.rect.x, self.rect.y = self.pos
-
-
 class Bullet(SpriteThis):
-    """Class for the basic bullets"""
+    """Class for the basic bullets
+
+    Parameters:
+    -----------
+    path: path to the image file
+    scale: scale factor
+    """
     def __init__(self, path, scale = 0.75):
         super().__init__(path, scale)
         self.v_unit = pygame.Vector2((0, 1))
@@ -149,16 +144,47 @@ class Bullet(SpriteThis):
             self.kill()
 
 
+class HealthBar(SpriteThis):
+    """Creates health bar as a sprite object
+
+    Parameters:
+    -----------
+    path: path to the images files
+    pos: position
+    scale: scale factor
+    """
+    def __init__(self, path = "../Artwork/Healthbar/health_bar15.png", pos = (15, 20), scale = 0.37):
+        super().__init__(path, scale)
+        self.health = 15
+        self.pos = pos
+        self.rect.x, self.rect.y = self.pos
+
+    def is_empty(self):
+        if self.life <= 0:
+            return True
+        else:
+            return False
+
+    def reduce_health(self, amount = 1):
+        self.health -= amount
+        if self.health >= 0:
+            super().__init__("../Artwork/Healthbar/health_bar" + str(self.health) + ".png", scale = 0.37)
+            self.rect.x, self.rect.y = self.pos
+
+
 class Player:
-    def __init__(self, name, player):
-
+    """ System class handeling multiple players"""
+    def __init__(self, name, player, life = 3):
         if player == 1:
+            self.player = player
             self.ship = Ship(player, scale = 0.5)
             self.name_tag = TextBox(str(name), (self.ship.health_bar.rect.x + 10, self.ship.health_bar.rect.y - 10))
+            self.life = Life(pos = (self.ship.health_bar.rect.x + 155, self.ship.health_bar.rect.y + 12))
         elif player == 2:
+            self.player = player
             self.ship = Ship(player, scale = 0.5)
             self.name_tag = TextBox(str(name), (self.ship.health_bar.rect.x + 10, self.ship.health_bar.rect.y - 10))
-
+            self.life = Life(pos = (self.ship.health_bar.rect.x + 155, self.ship.health_bar.rect.y + 12))
 
         try:
             ships.add(self.ship)
@@ -166,18 +192,50 @@ class Player:
             print(f"Were not abel to add {name}'s ship into the sprite group ships. Does this group exist? If not, make it!")
 
         try:
-            all_sprites.add(self.ship, self.ship.health_bar, self.name_tag)
+            all_sprites.add(self.ship, self.ship.health_bar, self.name_tag, self.life)
         except:
             print("Were not abel to add sprites to the sprite group all_sprites. Does this group exist? If not, make it!")
 
+    def update(self):
+        if self.ship.health_bar.health < 0:
+            self.life.reduce_life()
+            self.ship.health_bar.__init__(pos = self.ship.health_bar_pos)
+
+            if self.life.life <= 0:
+                self.ship.kill()
+
+
+class Life(SpriteThis):
+    """Hndles players life. Each time the health bar is empty the player's life is reduced by one.
+
+    Parameters:
+    -----------
+    path: path to the image file
+    pos: position
+    scale: scale factor
+    life: Amount of lifes.
+    """
+    def __init__(self, path = "../Artwork/Heart_bar/6.png", pos = (0, 0), scale = 1.2, life = 6):
+        super().__init__(path, scale)
+        self.life = life
+        self.pos = pos
+        self.rect.x, self.rect.y = pos[0], pos[1]
+
+    def reduce_life(self):
+        self.life -= 2
+        if self.life >= 0:
+            new_path = "../Artwork/Heart_bar/" + str(self.life) + ".png"
+            super().__init__(path = new_path, scale = 1.2)
+            self.rect.x, self.rect.y = self.pos[0], self.pos[1]
+
+
 def proj(v, w):
-    """ Calculates the ortogonal projection of v onto w
+    """ Calculates the ortogonal projection of v onto w.
 
     Parameters:
     -----------
     v: pygame.Vector2
     w: pygame.Vector2
-
     Return:
     -------
     pygame.Vector2
@@ -188,11 +246,10 @@ def proj(v, w):
         raise TypeError("Both arguments v and W must be an instance of pygame.math.Vector2")
 
 
-# doc: Add doc string
-# doc: Explain the "collission-bounce algorithm" you so cleverly have come up with.
-# doc: Explain why you have chosen circular hitboxes in stead of rectangular ones.
-# doc: Explain the scale factor. why 0.7 and not 1?
 def check_collision_ship_planet():
+    """Check for collisions between the ships and the plasnets.
+    If a ship hits a planet it will bounce back, and loose health.
+    """
     ships_planets = pygame.sprite.groupcollide(ships, planets, False, False, pygame.sprite.collide_circle_ratio(0.7))
     if ships_planets:
         for ship in ships_planets:
@@ -200,20 +257,24 @@ def check_collision_ship_planet():
                 ship_to_planet = pygame.Vector2((planet.rect.centerx - ship.rect.centerx, planet.rect.centery - ship.rect.centery))
                 # This vector measures how "critical" the collission is.
                 projection = proj(ship.v, ship_to_planet)
-                if projection.length() > 0.9*ship.max_speed:
-                    ship.health_bar.reduce_health(2)
-                elif projection.length() <= 0.9*ship.max_speed and projection.length() > 0:
-                    ship.health_bar.reduce_health(1)
+                if projection.length() > 0:
+                    ship.health_bar.reduce_health()
                     bounce = -projection.normalize()
                     ship.rect.centerx += int(15*bounce.x)
                     ship.rect.centery += int(15*bounce.y)
                 else:
                     print
                     ("check_collision_ship_planet function did not work as expected.")
-                    pass
 
 
 def check_collision_ship_wall(bounce = 15):
+    """Check for collisions between the ships and the edge of the screen.
+    If a ship colides with the edge it will bounce back and loose health.
+
+    Parameters:
+    -----------
+    bounce: Determines how hard the bounce back after a colission will be
+    """
     collided_left_wall = pygame.sprite.spritecollide(left_wall, ships, False)
     collided_right_wall = pygame.sprite.spritecollide(right_wall, ships, False)
     collided_bottom_wall = pygame.sprite.spritecollide(bottom_wall, ships, False)
@@ -292,6 +353,9 @@ if __name__ == "__main__":
 
         check_collision_ship_planet()
         check_collision_ship_wall()
+
+        player1.update()
+        player2.update()
 
         screen.blit(backgound, (0,0))
         all_sprites.update()
