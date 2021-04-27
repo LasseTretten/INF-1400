@@ -92,14 +92,17 @@ class Ship(SpriteThis):
         if self.player == 1:
             try:
                 bullets1.add(bullet)
+                pygame.mixer.Sound.play(shoot_sound1)
             except:
                 raise Exception("Were not abel to add bullet to the sprite group bullets1. Does this group exsist?")
         elif self.player == 2:
             try:
                 bullets2.add(bullet)
+                pygame.mixer.Sound.play(shoot_sound2)
             except:
                 raise Exception("Were not abel to add bullet to the sprite group bullets2. Does this group exsist?")
 
+        bullets.add(bullet)
         all_sprites.add(bullet)
         bullet.rect.center = self.rect.center
         bullet.surf_rotate(self.rot)
@@ -309,17 +312,26 @@ def check_collision_ship_wall(bounce = 15):
             ship.health_bar.reduce_health()
 
 def check_collision_ship_bullets():
+    """Check if any of the ships are hit by the other players bullets"""
     for ship in ships:
         if ship.player == 1:
             hit = pygame.sprite.spritecollide(ship, bullets2, True, pygame.sprite.collide_circle_ratio(0.85))
             for bullet in hit:
                 ship.health_bar.reduce_health()
+                ship.rect.x += bullet.v.x
+                ship.rect.y += bullet.v.y
         elif ship.player == 2:
             hit = pygame.sprite.spritecollide(ship, bullets1, True, pygame.sprite.collide_circle_ratio(0.85))
             for bullet in hit:
                 ship.health_bar.reduce_health()
                 ship.rect.x += bullet.v.x
                 ship.rect.y +=  bullet.v.y
+
+def check_collision_planets_bullets():
+    """Check if any of the bullets have hit a planet. If so, they are deleted."""
+    for planet in planets:
+        pygame.sprite.spritecollide(planet, bullets, True, pygame.sprite.collide_circle_ratio(0.75))
+    
 
 if __name__ == "__main__":
     SCREEN_WIDTH = 1400
@@ -332,6 +344,7 @@ if __name__ == "__main__":
     ### SPRITE GROUPS ###
     all_sprites = pygame.sprite.Group()
     ships = pygame.sprite.Group()
+    bullets = pygame.sprite.Group()
     bullets1 = pygame.sprite.Group()
     bullets2 = pygame.sprite.Group()
     planets = pygame.sprite.Group()
@@ -363,8 +376,14 @@ if __name__ == "__main__":
     bottom_wall.rect.y = SCREEN_HEIGHT - 5
 
     ### SOUND EFFECTS ###
+    pygame.mixer.music.set_volume(0.3)
     backgound_music = pygame.mixer.music.load("../Artwork/Sound/background.wav")
-
+    shoot_sound1 = pygame.mixer.Sound("../Artwork/Sound/atari_fire_1.wav")
+    shoot_sound1.set_volume(0.18)
+    shoot_sound2 = pygame.mixer.Sound("../Artwork/Sound/atari_fire_2.wav")
+    shoot_sound2.set_volume(0.18)
+    
+                    
     player1 = Player("Lasse", 1)
     player2 = Player("Elias", 2)
 
@@ -384,6 +403,7 @@ if __name__ == "__main__":
         check_collision_ship_planet()
         check_collision_ship_wall()
         check_collision_ship_bullets()
+        check_collision_planets_bullets()
         
         player1.update()
         player2.update()
