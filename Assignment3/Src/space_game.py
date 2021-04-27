@@ -15,6 +15,7 @@ class Ship(SpriteThis):
     """
     def __init__(self, player, scale = 1):
         if player == 1:
+            self.player = player
             self.keys = [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_RSHIFT]
             self.path = "../Artwork/PNG/playerShip1_green.png"
             super().__init__(self.path, scale)
@@ -22,6 +23,7 @@ class Ship(SpriteThis):
             self.health_bar_pos = (15, 20)
             self.health_bar = HealthBar(pos = self.health_bar_pos)
         elif player == 2:
+            self.player = player
             self.keys = [pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_RALT]
             self.path = "../Artwork/PNG/playerShip1_red.png"
             super().__init__(self.path, scale)
@@ -87,7 +89,17 @@ class Ship(SpriteThis):
     def shoot(self):
         """ Makes the ship fire a bullet."""
         bullet = Bullet("../Artwork/PNG/Lasers/laserGreen04.png")
-        bullets.add(bullet)
+        if self.player == 1:
+            try:
+                bullets1.add(bullet)
+            except:
+                raise Exception("Were not abel to add bullet to the sprite group bullets1. Does this group exsist?")
+        elif self.player == 2:
+            try:
+                bullets2.add(bullet)
+            except:
+                raise Exception("Were not abel to add bullet to the sprite group bullets2. Does this group exsist?")
+
         all_sprites.add(bullet)
         bullet.rect.center = self.rect.center
         bullet.surf_rotate(self.rot)
@@ -172,6 +184,30 @@ class HealthBar(SpriteThis):
             self.rect.x, self.rect.y = self.pos
 
 
+class Life(SpriteThis):
+    """Hndles players life. Each time the health bar is empty the player's life is reduced by one.
+
+    Parameters:
+    -----------
+    path: path to the image file
+    pos: position
+    scale: scale factor
+    life: Amount of lifes.
+    """
+    def __init__(self, path = "../Artwork/Heart_bar/6.png", pos = (0, 0), scale = 1.2, life = 6):
+        super().__init__(path, scale)
+        self.life = life
+        self.pos = pos
+        self.rect.x, self.rect.y = pos[0], pos[1]
+
+    def reduce_life(self):
+        self.life -= 2
+        if self.life >= 0:
+            new_path = "../Artwork/Heart_bar/" + str(self.life) + ".png"
+            super().__init__(path = new_path, scale = 1.2)
+            self.rect.x, self.rect.y = self.pos[0], self.pos[1]
+
+
 class Player:
     """ System class handeling multiple players"""
     def __init__(self, name, player, life = 3):
@@ -203,30 +239,6 @@ class Player:
 
             if self.life.life <= 0:
                 self.ship.kill()
-
-
-class Life(SpriteThis):
-    """Hndles players life. Each time the health bar is empty the player's life is reduced by one.
-
-    Parameters:
-    -----------
-    path: path to the image file
-    pos: position
-    scale: scale factor
-    life: Amount of lifes.
-    """
-    def __init__(self, path = "../Artwork/Heart_bar/6.png", pos = (0, 0), scale = 1.2, life = 6):
-        super().__init__(path, scale)
-        self.life = life
-        self.pos = pos
-        self.rect.x, self.rect.y = pos[0], pos[1]
-
-    def reduce_life(self):
-        self.life -= 2
-        if self.life >= 0:
-            new_path = "../Artwork/Heart_bar/" + str(self.life) + ".png"
-            super().__init__(path = new_path, scale = 1.2)
-            self.rect.x, self.rect.y = self.pos[0], self.pos[1]
 
 
 def proj(v, w):
@@ -296,6 +308,16 @@ def check_collision_ship_wall(bounce = 15):
             ship.rect.centery += bounce
             ship.health_bar.reduce_health()
 
+def check_collision_ship_bullets():
+    for ship in ships:
+        if ship.player == 1:
+            hit = pygame.sprite.spritecollide(ship, bullets2, True, pygame.sprite.collide_circle_ratio(0.85))
+            for bullet in hit:
+                ship.health_bar.reduce_health()
+        elif ship.player == 2:
+            hit = pygame.sprite.spritecollide(ship, bullets1, True, pygame.sprite.collide_circle_ratio(0.85))
+            for bullet in hit:
+                ship.health_bar.reduce_health()
 
 if __name__ == "__main__":
     SCREEN_WIDTH = 1400
@@ -308,7 +330,8 @@ if __name__ == "__main__":
     ### SPRITE GROUPS ###
     all_sprites = pygame.sprite.Group()
     ships = pygame.sprite.Group()
-    bullets = pygame.sprite.Group()
+    bullets1 = pygame.sprite.Group()
+    bullets2 = pygame.sprite.Group()
     planets = pygame.sprite.Group()
 
     ### BACKGROUND ###
@@ -353,7 +376,8 @@ if __name__ == "__main__":
 
         check_collision_ship_planet()
         check_collision_ship_wall()
-
+        check_collision_ship_bullets()
+        
         player1.update()
         player2.update()
 
