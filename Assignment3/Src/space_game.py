@@ -318,6 +318,8 @@ def check_collision_ship_bullets():
             hit = pygame.sprite.spritecollide(ship, bullets1, True, pygame.sprite.collide_circle_ratio(0.85))
             for bullet in hit:
                 ship.health_bar.reduce_health()
+                ship.rect.x += bullet.v.x
+                ship.rect.y +=  bullet.v.y
 
 if __name__ == "__main__":
     SCREEN_WIDTH = 1400
@@ -360,9 +362,14 @@ if __name__ == "__main__":
     bottom_wall = SpriteMe(pygame.Surface((SCREEN_WIDTH, 5)))
     bottom_wall.rect.y = SCREEN_HEIGHT - 5
 
+    ### SOUND EFFECTS ###
+    backgound_music = pygame.mixer.music.load("../Artwork/Sound/background.wav")
 
     player1 = Player("Lasse", 1)
     player2 = Player("Elias", 2)
+
+    pygame.mixer.music.play(-1)
+    
     # Game loop
     RUNNING  = True
     while RUNNING:
