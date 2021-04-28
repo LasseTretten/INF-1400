@@ -19,7 +19,8 @@ class Ship(SpriteThis):
             self.keys = [pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_RSHIFT]
             self.path = "../Artwork/PNG/playerShip1_green.png"
             super().__init__(self.path, scale)
-            self.rect.center = (100, SCREEN_HEIGHT/2)
+            self.start_pos = (100, SCREEN_HEIGHT/2)
+            self.rect.center = self.start_pos
             self.health_bar_pos = (15, 20)
             self.health_bar = HealthBar(pos = self.health_bar_pos)
         elif player == 2:
@@ -27,7 +28,8 @@ class Ship(SpriteThis):
             self.keys = [pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_RALT]
             self.path = "../Artwork/PNG/playerShip1_red.png"
             super().__init__(self.path, scale)
-            self.rect.center = (SCREEN_WIDTH - 100, SCREEN_HEIGHT/2)
+            self.start_pos = (SCREEN_WIDTH - 100, SCREEN_HEIGHT/2)
+            self.rect.center = self.start_pos
             self.health_bar_pos = (SCREEN_WIDTH - 250, 20)
             self.health_bar = HealthBar(pos = self.health_bar_pos)
         else:
@@ -209,6 +211,7 @@ class Life(SpriteThis):
             new_path = "../Artwork/Heart_bar/" + str(self.life) + ".png"
             super().__init__(path = new_path, scale = 1.2)
             self.rect.x, self.rect.y = self.pos[0], self.pos[1]
+            pygame.mixer.Sound.play(explosion_sound)
 
 
 class Player:
@@ -239,10 +242,12 @@ class Player:
         if self.ship.health_bar.health < 0:
             self.life.reduce_life()
             self.ship.health_bar.__init__(pos = self.ship.health_bar_pos)
+            self.ship.rect.center = self.ship.start_pos
 
             if self.life.life <= 0:
                 self.ship.kill()
-
+                pygame.mixer.Sound.play(dead_sound)
+                
 
 def proj(v, w):
     """ Calculates the ortogonal projection of v onto w.
@@ -277,6 +282,7 @@ def check_collision_ship_planet():
                     bounce = -projection.normalize()
                     ship.rect.centerx += int(15*bounce.x)
                     ship.rect.centery += int(15*bounce.y)
+                    pygame.mixer.Sound.play(bounce_sound)
                 else:
                     print
                     ("check_collision_ship_planet function did not work as expected.")
@@ -298,18 +304,22 @@ def check_collision_ship_wall(bounce = 15):
         for ship in collided_left_wall:
             ship.rect.centerx += bounce
             ship.health_bar.reduce_health()
+            pygame.mixer.Sound.play(bounce_sound)
     if collided_right_wall:
         for ship in collided_right_wall:
             ship.rect.centerx -= bounce
             ship.health_bar.reduce_health()
+            pygame.mixer.Sound.play(bounce_sound)
     if collided_bottom_wall:
         for ship in collided_bottom_wall:
             ship.rect.centery -= bounce
             ship.health_bar.reduce_health()
+            pygame.mixer.Sound.play(bounce_sound)
     if collided_top_wall:
         for ship in collided_top_wall:
             ship.rect.centery += bounce
             ship.health_bar.reduce_health()
+            pygame.mixer.Sound.play(bounce_sound)
 
 def check_collision_ship_bullets():
     """Check if any of the ships are hit by the other players bullets"""
@@ -320,12 +330,14 @@ def check_collision_ship_bullets():
                 ship.health_bar.reduce_health()
                 ship.rect.x += bullet.v.x
                 ship.rect.y += bullet.v.y
+                pygame.mixer.Sound.play(hit_sound)
         elif ship.player == 2:
             hit = pygame.sprite.spritecollide(ship, bullets1, True, pygame.sprite.collide_circle_ratio(0.85))
             for bullet in hit:
                 ship.health_bar.reduce_health()
                 ship.rect.x += bullet.v.x
                 ship.rect.y +=  bullet.v.y
+                pygame.mixer.Sound.play(hit_sound)
 
 def check_collision_planets_bullets():
     """Check if any of the bullets have hit a planet. If so, they are deleted."""
@@ -353,7 +365,7 @@ if __name__ == "__main__":
     backgound = pygame.image.load("../Artwork/Backgrounds/blue.png").convert()
     backgound = pygame.transform.smoothscale(backgound, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
-    ### OBSTACLES ###
+    ### PLANETS ###
     planet1 = SpriteThis("../Artwork/SpaceCC0/deadPlanet.png", scale = 0.2)
     planet1.rect.center = (250, 250)
     planet2 = SpriteThis("../Artwork/SpaceCC0/greenPlanet.png", scale = 0.23)
@@ -378,10 +390,19 @@ if __name__ == "__main__":
     ### SOUND EFFECTS ###
     pygame.mixer.music.set_volume(0.3)
     backgound_music = pygame.mixer.music.load("../Artwork/Sound/background.wav")
-    shoot_sound1 = pygame.mixer.Sound("../Artwork/Sound/atari_fire_1.wav")
+    shoot_sound1 = pygame.mixer.Sound("../Artwork/Sound/shoot1.wav")
     shoot_sound1.set_volume(0.18)
-    shoot_sound2 = pygame.mixer.Sound("../Artwork/Sound/atari_fire_2.wav")
+    shoot_sound2 = pygame.mixer.Sound("../Artwork/Sound/shoot2.wav")
     shoot_sound2.set_volume(0.18)
+    explosion_sound = pygame.mixer.Sound("../Artwork/Sound/bomb.wav")
+    explosion_sound.set_volume(0.2)
+    bounce_sound = pygame.mixer.Sound("../Artwork/Sound/bounce.wav")
+    bounce_sound.set_volume(0.2)
+    hit_sound = pygame.mixer.Sound("../Artwork/Sound/hit.wav")
+    hit_sound.set_volume(0.18)
+    dead_sound = pygame.mixer.Sound("../Artwork/Sound/dead.wav")
+    dead_sound.set_volume(0.2)
+    
     
                     
     player1 = Player("Lasse", 1)
