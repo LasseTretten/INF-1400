@@ -41,7 +41,7 @@ class Ship(SpriteThis):
         self.rot = 0
         self.flag = 1
 
-    def friction(self, f = 0.2):
+    def friction(self, f = 0.18):
         """Adds friction to the ship's motion
         Parameters:
         -----------
